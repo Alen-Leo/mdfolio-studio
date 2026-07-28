@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { marked } from "marked";
 import hljs from "highlight.js";
+import mermaid from "mermaid";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 
 const starterMarkdown = `# 把想法，变成漂亮的 PDF
@@ -87,6 +88,13 @@ const escapeHtml = (value: string) =>
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;");
 
+const normalizeMermaidSource = (value: string) =>
+  value
+    .replace(/\r\n?/g, "\n")
+    .replace(/[\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000]/g, " ")
+    .replace(/[\u200b-\u200d\u2060\ufeff]/g, "")
+    .trim();
+
 marked.use({
   gfm: true,
   breaks: true,
@@ -94,7 +102,8 @@ marked.use({
     code({ text, lang }) {
       const language = lang?.trim().toLowerCase();
       if (language === "mermaid") {
-        return `<div class="diagram-frame"><div class="diagram-label">MERMAID</div><pre class="mermaid">${escapeHtml(text)}</pre></div>`;
+        const source = normalizeMermaidSource(text);
+        return `<div class="diagram-frame"><div class="diagram-label">MERMAID</div><pre class="mermaid">${escapeHtml(source)}</pre></div>`;
       }
 
       let highlighted = escapeHtml(text);
@@ -206,34 +215,49 @@ export default function Home() {
   }, [deferredMarkdown]);
 
   useEffect(() => {
-    const diagrams = previewRef.current?.querySelectorAll<HTMLElement>(".mermaid");
-    if (!diagrams?.length) return;
-    let cancelled = false;
-    const renderDiagrams = async () => {
-      const mermaid = (await import("mermaid")).default;
-      mermaid.initialize({
-        startOnLoad: false,
-        securityLevel: "strict",
-        theme: theme === "dark" ? "dark" : "base",
-        themeVariables:
-          theme === "dark"
-            ? { primaryColor: "#27272a", primaryTextColor: "#fafafa", lineColor: "#a1a1aa" }
-            : { primaryColor: "#f4f4f0", primaryTextColor: "#18181b", lineColor: "#71717a" },
-        fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
-      });
-      if (!cancelled) {
-        try {
-          await mermaid.run({ nodes: Array.from(diagrams), suppressErrors: true });
-        } catch {
-          diagrams.forEach((node) => node.classList.add("diagram-error"));
-        }
-      }
+    const preview = previewRef.current;
+    if (!preview) return;
+    let disposed = false;
+    let renderQueue = Promise.resolve();
+
+    mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: "strict",
+      theme: theme === "dark" ? "dark" : "base",
+      themeVariables:
+        theme === "dark"
+          ? { primaryColor: "#27272a", primaryTextColor: "#fafafa", lineColor: "#a1a1aa" }
+          : { primaryColor: "#f4f4f0", primaryTextColor: "#18181b", lineColor: "#71717a" },
+      fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+    });
+
+    const renderPendingDiagrams = () => {
+      renderQueue = renderQueue
+        .then(async () => {
+          if (disposed) return;
+          const diagrams = preview.querySelectorAll<HTMLElement>(".mermaid:not([data-processed])");
+          for (const node of Array.from(diagrams)) {
+            if (disposed) break;
+            try {
+              await mermaid.run({ nodes: [node], suppressErrors: false });
+            } catch {
+              node.setAttribute("data-processed", "error");
+              node.classList.add("diagram-error");
+            }
+          }
+        })
+        .catch((error) => console.error("Mermaid render failed", error));
     };
-    void renderDiagrams();
+
+    const observer = new MutationObserver(renderPendingDiagrams);
+    observer.observe(preview, { childList: true, subtree: true });
+    renderPendingDiagrams();
+
     return () => {
-      cancelled = true;
+      disposed = true;
+      observer.disconnect();
     };
-  }, [rendered, theme]);
+  }, [theme]);
 
   const stats = useMemo(() => {
     const plain = markdown

@@ -23,6 +23,8 @@ test("server-renders the MDFolio workspace and PNG action", async () => {
   assert.match(html, /<title>MDFolio/);
   assert.match(html, /\u5bfc\u51fa PNG/);
   assert.match(html, /lucide-image-down/);
+  assert.match(html, /\u6c34\u5370/);
+  assert.match(html, /lucide-stamp/);
   assert.match(html, /\u5bfc\u51fa PDF/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape/i);
 });
@@ -41,8 +43,15 @@ test("wires whole-preview and per-Mermaid PNG exports", async () => {
   assert.match(page, /exportMermaidElement/);
   assert.match(helper, /import\("html-to-image"\)/);
   assert.match(helper, /pixelRatio:\s*3/);
-  assert.match(helper, /toBlob\(element/);
+  assert.match(helper, /type WatermarkConfig/);
+  assert.match(helper, /drawWatermark/);
+  assert.match(helper, /canvas\.toBlob/);
+  assert.match(page, /mdfolio-watermark/);
+  assert.match(page, /watermark-layer/);
+  assert.match(page, /exportMermaidElement[\s\S]*watermark/);
   assert.match(css, /\.diagram-download/);
+  assert.match(css, /\.watermark-popover/);
+  assert.match(css, /@media print[\s\S]*\.watermark-layer[\s\S]*position:\s*fixed/);
   assert.match(css, /@media print[\s\S]*\.diagram-download/);
   assert.match(packageJson, /"html-to-image": "\^1\.11\.13"/);
 });

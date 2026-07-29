@@ -23,6 +23,7 @@ import {
   Quote,
   Redo2,
   Sparkles,
+  Stamp,
   Sun,
   Table2,
   Undo2,
@@ -33,7 +34,8 @@ import { marked } from "marked";
 import hljs from "highlight.js";
 import mermaid from "mermaid";
 import { documentBaseName, exportMermaidElement, triggerDownload, waitForMermaid } from "./png-export";
-import { type MouseEvent as ReactMouseEvent, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import type { WatermarkConfig } from "./png-export";
+import { type CSSProperties, type MouseEvent as ReactMouseEvent, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 
 const starterMarkdown = `# 把想法，变成漂亮的 PDF
 
@@ -125,6 +127,15 @@ marked.use({
 
 type ViewMode = "split" | "editor" | "preview";
 
+const defaultWatermark: WatermarkConfig = {
+  enabled: false,
+  text: "内部资料",
+  opacity: 0.12,
+  size: 28,
+  angle: -28,
+  mode: "tile",
+};
+
 const toolbarItems = [
   { label: "标题", icon: Heading2, before: "## ", after: "", placeholder: "标题" },
   { label: "粗体", icon: Bold, before: "**", after: "**", placeholder: "重要内容" },
@@ -162,6 +173,8 @@ export default function Home() {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [ready, setReady] = useState(false);
   const [exportingPng, setExportingPng] = useState(false);
+  const [watermarkOpen, setWatermarkOpen] = useState(false);
+  const [watermark, setWatermark] = useState<WatermarkConfig>(defaultWatermark);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -173,12 +186,20 @@ export default function Home() {
     const cached = window.localStorage.getItem("mdfolio-document");
     const cachedName = window.localStorage.getItem("mdfolio-filename");
     const cachedTheme = window.localStorage.getItem("mdfolio-theme");
+    const cachedWatermark = window.localStorage.getItem("mdfolio-watermark");
     if (cached) {
       setMarkdown(cached);
       historyRef.current = [cached];
     }
     if (cachedName) setFileName(cachedName);
     if (cachedTheme === "dark") setTheme("dark");
+    if (cachedWatermark) {
+      try {
+        setWatermark({ ...defaultWatermark, ...JSON.parse(cachedWatermark) });
+      } catch {
+        window.localStorage.removeItem("mdfolio-watermark");
+      }
+    }
     setReady(true);
   }, []);
 
@@ -197,6 +218,11 @@ export default function Home() {
     window.localStorage.setItem("mdfolio-theme", theme);
     document.documentElement.dataset.theme = theme;
   }, [theme]);
+
+  useEffect(() => {
+    if (!ready) return;
+    window.localStorage.setItem("mdfolio-watermark", JSON.stringify(watermark));
+  }, [ready, watermark]);
 
   useEffect(() => {
     let cancelled = false;
@@ -271,6 +297,12 @@ export default function Home() {
     const words = plain.match(/[A-Za-z0-9]+/g)?.length || 0;
     return { words: chinese + words, lines: markdown.split("\n").length };
   }, [markdown]);
+
+  const watermarkStyle = {
+    "--watermark-opacity": String(watermark.opacity),
+    "--watermark-size": `${watermark.size}px`,
+    "--watermark-angle": `${watermark.angle}deg`,
+  } as CSSProperties;
 
   const pushHistory = useCallback((value: string) => {
     if (historyTimerRef.current) clearTimeout(historyTimerRef.current);
@@ -381,7 +413,12 @@ export default function Home() {
     button.disabled = true;
     button.textContent = "\u751f\u6210\u4e2d\u2026";
     try {
-      await exportMermaidElement(diagram, `${documentBaseName(fileName)}-mermaid-${index}.png`, theme === "dark" ? "#202125" : "#f7f7f4");
+      await exportMermaidElement(
+        diagram,
+        `${documentBaseName(fileName)}-mermaid-${index}.png`,
+        theme === "dark" ? "#202125" : "#f7f7f4",
+        watermark,
+      );
     } catch (error) {
       console.error("Mermaid PNG export failed", error);
       window.alert("\u56fe\u8868\u5bfc\u51fa\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002");
@@ -437,6 +474,13 @@ export default function Home() {
           <button className="ghost-button desktop-only" onClick={downloadMarkdown}>
             <Download size={15} /> 保存 MD
           </button>
+          <button
+            className={`ghost-button desktop-only ${watermark.enabled ? "active-watermark" : ""}`}
+            onClick={() => setWatermarkOpen(!watermarkOpen)}
+            aria-pressed={watermark.enabled}
+          >
+            <Stamp size={15} /> 水印
+          </button>
           <button className="ghost-button desktop-only" onClick={exportPreviewPng} disabled={exportingPng}>
             <ImageDown size={15} /> {exportingPng ? "\u751f\u6210\u4e2d\u2026" : "\u5bfc\u51fa PNG"}
           </button>
@@ -452,6 +496,14 @@ export default function Home() {
           <div className="mobile-menu">
             <button onClick={() => fileInputRef.current?.click()}><Upload size={16} /> 导入 Markdown</button>
             <button onClick={downloadMarkdown}><Download size={16} /> 保存 Markdown</button>
+            <button
+              onClick={() => {
+                setWatermarkOpen(true);
+                setMobileMenu(false);
+              }}
+            >
+              <Stamp size={16} /> 水印设置
+            </button>
             <button onClick={exportPreviewPng} disabled={exportingPng}>
               <ImageDown size={16} /> {exportingPng ? "\u751f\u6210\u4e2d\u2026" : "\u5bfc\u51fa\u9884\u89c8 PNG"}
             </button>
@@ -459,6 +511,43 @@ export default function Home() {
               {theme === "light" ? <Moon size={16} /> : <Sun size={16} />} 切换主题
             </button>
           </div>
+        )}
+        {watermarkOpen && (
+          <section className="watermark-popover" role="dialog" aria-label="统一水印设置">
+            <div className="watermark-panel-header">
+              <div><strong>统一水印</strong><span>所有导出页面使用同一水印</span></div>
+              <button className="watermark-close" onClick={() => setWatermarkOpen(false)} aria-label="关闭水印设置"><X size={16} /></button>
+            </div>
+            <label className="watermark-toggle">
+              <span><strong>启用水印</strong><small>同步应用到 PDF 与 PNG</small></span>
+              <input type="checkbox" checked={watermark.enabled} onChange={(event) => setWatermark({ ...watermark, enabled: event.target.checked })} />
+              <i aria-hidden="true" />
+            </label>
+            <label className="watermark-field">
+              <span>水印文字</span>
+              <input type="text" value={watermark.text} maxLength={48} aria-label="水印文字" onChange={(event) => setWatermark({ ...watermark, text: event.target.value })} />
+            </label>
+            <div className="watermark-field">
+              <span>排列方式</span>
+              <div className="watermark-mode">
+                <button className={watermark.mode === "single" ? "active" : ""} onClick={() => setWatermark({ ...watermark, mode: "single" })}>居中单个</button>
+                <button className={watermark.mode === "tile" ? "active" : ""} onClick={() => setWatermark({ ...watermark, mode: "tile" })}>平铺</button>
+              </div>
+            </div>
+            <label className="watermark-field watermark-range">
+              <span>透明度 <b>{Math.round(watermark.opacity * 100)}%</b></span>
+              <input type="range" min="0.04" max="0.3" step="0.01" value={watermark.opacity} onChange={(event) => setWatermark({ ...watermark, opacity: Number(event.target.value) })} />
+            </label>
+            <label className="watermark-field watermark-range">
+              <span>字号 <b>{watermark.size}px</b></span>
+              <input type="range" min="18" max="48" step="1" value={watermark.size} onChange={(event) => setWatermark({ ...watermark, size: Number(event.target.value) })} />
+            </label>
+            <label className="watermark-field watermark-range">
+              <span>角度 <b>{watermark.angle}°</b></span>
+              <input type="range" min="-60" max="0" step="1" value={watermark.angle} onChange={(event) => setWatermark({ ...watermark, angle: Number(event.target.value) })} />
+            </label>
+            <p className="watermark-hint">同一水印将应用到 PDF 每一页、整篇 PNG 和 Mermaid PNG。</p>
+          </section>
         )}
       </header>
 
@@ -528,12 +617,16 @@ export default function Home() {
             <span className="a4-badge">A4</span>
           </div>
           <div className="preview-scroll">
-            <article
-              ref={previewRef}
-              className="markdown-body"
-              onClick={handlePreviewClick}
-              dangerouslySetInnerHTML={{ __html: rendered }}
-            />
+            <div ref={previewRef} className="document-canvas" onClick={handlePreviewClick}>
+              <article className="markdown-body" dangerouslySetInnerHTML={{ __html: rendered }} />
+              {watermark.enabled && watermark.text.trim() && (
+                <div className={`watermark-layer watermark-${watermark.mode}`} style={watermarkStyle} aria-hidden="true">
+                  {Array.from({ length: watermark.mode === "tile" ? 30 : 1 }, (_, index) => (
+                    <span key={index}>{watermark.text.trim()}</span>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
           <footer className="pane-footer preview-footer">
             <span><Sparkles size={13} /> 高亮与图表已就绪</span>

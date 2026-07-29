@@ -101,6 +101,12 @@ const normalizeMermaidSource = (value: string) =>
 marked.use({
   gfm: true,
   breaks: true,
+  tokenizer: {
+    del(source) {
+      if (source.startsWith("~") && !source.startsWith("~~")) return;
+      return false;
+    },
+  },
   renderer: {
     code({ text, lang }) {
       const language = lang?.trim().toLowerCase();

@@ -86,6 +86,7 @@ test("keeps export and editor edge cases covered", async () => {
   ]);
 
   assert.match(page, /cached !== null/);
+  assert.match(page, /source\.startsWith\("~"\)[\s\S]*!source\.startsWith\("~~"\)/);
   assert.match(page, /pendingHistoryValueRef/);
   assert.match(page, /currentTarget\.value = ""/);
   assert.match(page, /await waitForMermaid\(preview\)[\s\S]*document\.fonts/);

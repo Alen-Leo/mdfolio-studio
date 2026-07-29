@@ -147,6 +147,190 @@ button {
   gap: 8px;
 }
 
+.active-watermark {
+  border-color: #a4bd36 !important;
+  background: color-mix(in srgb, var(--accent) 15%, var(--surface)) !important;
+}
+
+.watermark-popover {
+  position: absolute;
+  z-index: 30;
+  top: 57px;
+  right: 98px;
+  width: 310px;
+  padding: 15px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface) 97%, transparent);
+  box-shadow: 0 18px 54px rgba(20, 20, 20, 0.16);
+  backdrop-filter: blur(18px);
+}
+
+.watermark-panel-header,
+.watermark-toggle,
+.watermark-field > span,
+.watermark-mode {
+  display: flex;
+  align-items: center;
+}
+
+.watermark-panel-header {
+  justify-content: space-between;
+  margin-bottom: 13px;
+}
+
+.watermark-panel-header > div,
+.watermark-toggle > span {
+  display: grid;
+  gap: 2px;
+}
+
+.watermark-panel-header strong {
+  font-size: 13px;
+}
+
+.watermark-panel-header span,
+.watermark-toggle small {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.watermark-close {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.watermark-close:hover {
+  background: var(--surface-soft);
+}
+
+.watermark-toggle {
+  position: relative;
+  justify-content: space-between;
+  min-height: 48px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-soft);
+  cursor: pointer;
+}
+
+.watermark-toggle input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.watermark-toggle i {
+  position: relative;
+  width: 34px;
+  height: 20px;
+  border-radius: 99px;
+  background: var(--line-strong);
+  transition: background 150ms ease;
+}
+
+.watermark-toggle i::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+  transition: transform 150ms ease;
+}
+
+.watermark-toggle input:checked + i {
+  background: #94ad31;
+}
+
+.watermark-toggle input:checked + i::after {
+  transform: translateX(14px);
+}
+
+.watermark-field {
+  display: grid;
+  gap: 7px;
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.watermark-field > span {
+  justify-content: space-between;
+}
+
+.watermark-field b {
+  color: var(--ink);
+  font-size: 10px;
+}
+
+.watermark-field > input[type="text"] {
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  outline: 0;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 12px;
+}
+
+.watermark-field > input[type="text"]:focus {
+  border-color: #9db82d;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 17%, transparent);
+}
+
+.watermark-mode {
+  padding: 3px;
+  gap: 3px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface-soft);
+}
+
+.watermark-mode button {
+  flex: 1;
+  height: 29px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.watermark-mode button.active {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 4px rgba(20, 20, 20, 0.09);
+}
+
+.watermark-range input {
+  width: 100%;
+  accent-color: #94ad31;
+}
+
+.watermark-hint {
+  margin: 13px 0 0;
+  padding-top: 11px;
+  border-top: 1px solid var(--line);
+  color: var(--faint);
+  font-size: 9px;
+  line-height: 1.55;
+}
+
 .top-actions button,
 .workspace-bar button {
   border: 0;
@@ -388,10 +572,19 @@ button {
     repeating-linear-gradient(90deg, transparent 0 19px, color-mix(in srgb, var(--line) 35%, transparent) 20px) border-box;
 }
 
-.markdown-body {
+.document-canvas {
+  position: relative;
   width: min(100%, 780px);
   min-height: 100%;
   margin: 0 auto;
+}
+
+.markdown-body {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
   padding: clamp(32px, 5vw, 68px);
   border: 1px solid var(--line);
   border-radius: 3px;
@@ -401,6 +594,43 @@ button {
   font-family: Inter, "PingFang SC", "Microsoft YaHei", ui-sans-serif, system-ui, sans-serif;
   font-size: 14px;
   line-height: 1.8;
+}
+
+.watermark-layer {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  color: var(--ink);
+}
+
+.watermark-layer span {
+  opacity: var(--watermark-opacity);
+  font-size: var(--watermark-size);
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  white-space: nowrap;
+  transform: rotate(var(--watermark-angle));
+  user-select: none;
+}
+
+.watermark-single {
+  display: grid;
+  place-items: center;
+}
+
+.watermark-tile {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(min(100%, var(--watermark-cell-width)), 1fr)
+  );
+  grid-auto-rows: max(120px, var(--watermark-row-height));
+  align-items: center;
+  justify-items: center;
+  padding: 36px 0;
 }
 
 .markdown-body > :first-child {
@@ -489,6 +719,43 @@ button {
   margin: 38px 0;
   border: 0;
   border-top: 1px solid var(--line-strong);
+}
+
+.markdown-body .footnotes {
+  margin-top: 40px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line-strong);
+  color: var(--muted);
+  font-size: 0.9em;
+}
+
+.markdown-body .footnotes hr {
+  display: none;
+}
+
+.markdown-body .footnotes ol {
+  margin-bottom: 0;
+}
+
+.markdown-body .footnotes p {
+  margin-bottom: 8px;
+}
+
+.markdown-body [data-footnote-ref],
+.markdown-body [data-footnote-backref] {
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .markdown-body img {
@@ -625,12 +892,44 @@ button {
   background: var(--surface-soft);
 }
 
+.diagram-toolbar {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .diagram-label {
-  padding: 10px 0 6px;
   color: var(--faint);
   font-size: 8px;
   font-weight: 700;
   letter-spacing: 0.12em;
+}
+
+.diagram-download {
+  height: 24px;
+  padding: 0 9px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 700;
+  transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+
+.diagram-download:hover {
+  border-color: #9db82d;
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface));
+  color: var(--ink);
+}
+
+.diagram-download:disabled,
+.ghost-button:disabled {
+  cursor: wait;
+  opacity: 0.58;
 }
 
 .diagram-frame .mermaid {
@@ -661,7 +960,7 @@ button {
   display: none;
 }
 
-.view-preview .markdown-body {
+.view-preview .document-canvas {
   width: min(100%, 850px);
 }
 
@@ -715,6 +1014,12 @@ button {
 
   .mobile-only {
     display: inline-flex;
+  }
+
+  .watermark-popover {
+    top: 54px;
+    right: 10px;
+    width: min(310px, calc(100vw - 20px));
   }
 
   .mobile-menu {
@@ -826,7 +1131,7 @@ button {
 
 @page {
   size: A4;
-  margin: 15mm 17mm 17mm;
+  margin: 0;
 }
 
 @media print {
@@ -858,17 +1163,34 @@ button {
   .editor-pane,
   .pane-heading,
   .pane-footer,
-  .drop-overlay {
+  .drop-overlay,
+  .diagram-download {
     display: none !important;
+  }
+
+  .document-canvas {
+    position: static !important;
+    width: auto !important;
+    min-height: 0;
+    margin: 0 !important;
+  }
+
+  .watermark-layer {
+    position: fixed !important;
+    z-index: 4 !important;
+    inset: 0 !important;
+    color: #555 !important;
   }
 
   .markdown-body {
     width: auto !important;
     min-height: 0;
     margin: 0;
-    padding: 0;
+    padding: 15mm 17mm 17mm;
     border: 0;
     box-shadow: none;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
     color: #171719;
     font-size: 10.5pt;
   }

@@ -18,7 +18,7 @@ export const triggerDownload = (url: string, fileName: string) => {
   link.href = url;
   link.download = fileName;
   link.style.display = "none";
-  document.body.append(link);
+  document.body.appendChild(link);
   link.click();
   link.remove();
 };

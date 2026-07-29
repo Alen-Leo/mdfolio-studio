@@ -77,3 +77,23 @@ test("wires whole-preview and per-Mermaid PNG exports", async () => {
   assert.match(css, /@media print[\s\S]*box-decoration-break:\s*clone/);
   assert.match(packageJson, /"html-to-image": "\^1\.11\.13"/);
 });
+
+test("keeps export and editor edge cases covered", async () => {
+  const [page, layout, packageJson] = await Promise.all([
+    readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../package.json", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(page, /cached !== null/);
+  assert.match(page, /pendingHistoryValueRef/);
+  assert.match(page, /currentTarget\.value = ""/);
+  assert.match(page, /await waitForMermaid\(preview\)[\s\S]*document\.fonts/);
+  assert.match(page, /await waitForMermaid\(frame\)/);
+  assert.match(page, /documentBaseName\(fileName\)/);
+  assert.match(layout, /siteUrl\.endsWith\("\/"\)/);
+  assert.match(layout, /icon: "favicon\.svg"/);
+  assert.match(layout, /url: "og\.png"/);
+  assert.match(packageJson, /"build": "vinext build"/);
+  assert.doesNotMatch(packageJson, /WRANGLER_LOG_PATH=/);
+});

@@ -4,7 +4,6 @@ import {
   Bold,
   Braces,
   Check,
-  ChevronDown,
   Code2,
   Download,
   Eye,
@@ -182,31 +181,35 @@ export default function Home() {
   const historyRef = useRef<string[]>([starterMarkdown]);
   const historyIndexRef = useRef(0);
   const historyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingHistoryValueRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const cached = window.localStorage.getItem("mdfolio-document");
-    const cachedName = window.localStorage.getItem("mdfolio-filename");
-    const cachedTheme = window.localStorage.getItem("mdfolio-theme");
-    const cachedWatermark = window.localStorage.getItem("mdfolio-watermark");
-    if (cached) {
-      setMarkdown(cached);
-      historyRef.current = [cached];
-    }
-    if (cachedName) setFileName(cachedName);
-    if (cachedTheme === "dark") setTheme("dark");
-    if (cachedWatermark) {
-      try {
-        setWatermark({ ...defaultWatermark, ...JSON.parse(cachedWatermark) });
-      } catch {
-        window.localStorage.removeItem("mdfolio-watermark");
+    const frame = window.requestAnimationFrame(() => {
+      const cached = window.localStorage.getItem("mdfolio-document");
+      const cachedName = window.localStorage.getItem("mdfolio-filename");
+      const cachedTheme = window.localStorage.getItem("mdfolio-theme");
+      const cachedWatermark = window.localStorage.getItem("mdfolio-watermark");
+      if (cached !== null) {
+        setMarkdown(cached);
+        historyRef.current = [cached];
+        historyIndexRef.current = 0;
       }
-    }
-    setReady(true);
+      if (cachedName) setFileName(cachedName);
+      if (cachedTheme === "dark") setTheme("dark");
+      if (cachedWatermark) {
+        try {
+          setWatermark({ ...defaultWatermark, ...JSON.parse(cachedWatermark) });
+        } catch {
+          window.localStorage.removeItem("mdfolio-watermark");
+        }
+      }
+      setReady(true);
+    });
+    return () => window.cancelAnimationFrame(frame);
   }, []);
 
   useEffect(() => {
     if (!ready) return;
-    setSaved(false);
     const timer = window.setTimeout(() => {
       window.localStorage.setItem("mdfolio-document", markdown);
       window.localStorage.setItem("mdfolio-filename", fileName);
@@ -224,6 +227,13 @@ export default function Home() {
     if (!ready) return;
     window.localStorage.setItem("mdfolio-watermark", JSON.stringify(watermark));
   }, [ready, watermark]);
+
+  useEffect(
+    () => () => {
+      if (historyTimerRef.current) clearTimeout(historyTimerRef.current);
+    },
+    [],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -358,32 +368,53 @@ export default function Home() {
     watermarkRowHeight,
   ]);
 
+  const commitHistory = useCallback((value: string) => {
+    const current = historyRef.current.slice(0, historyIndexRef.current + 1);
+    if (current.at(-1) !== value) {
+      historyRef.current = [...current, value].slice(-80);
+      historyIndexRef.current = historyRef.current.length - 1;
+    }
+  }, []);
+
   const pushHistory = useCallback((value: string) => {
     if (historyTimerRef.current) clearTimeout(historyTimerRef.current);
+    pendingHistoryValueRef.current = value;
     historyTimerRef.current = setTimeout(() => {
-      const current = historyRef.current.slice(0, historyIndexRef.current + 1);
-      if (current.at(-1) !== value) {
-        historyRef.current = [...current, value].slice(-80);
-        historyIndexRef.current = historyRef.current.length - 1;
-      }
+      commitHistory(value);
+      historyTimerRef.current = null;
+      pendingHistoryValueRef.current = null;
     }, 350);
-  }, []);
+  }, [commitHistory]);
+
+  const flushPendingHistory = () => {
+    if (!historyTimerRef.current) return;
+    clearTimeout(historyTimerRef.current);
+    historyTimerRef.current = null;
+    const pendingValue = pendingHistoryValueRef.current;
+    pendingHistoryValueRef.current = null;
+    if (pendingValue !== null) commitHistory(pendingValue);
+  };
 
   const updateMarkdown = (value: string) => {
     setMarkdown(value);
+    setSaved(false);
     pushHistory(value);
   };
 
   const undo = () => {
+    flushPendingHistory();
     if (historyIndexRef.current <= 0) return;
     historyIndexRef.current -= 1;
     setMarkdown(historyRef.current[historyIndexRef.current]);
+    setSaved(false);
   };
 
   const redo = () => {
+    flushPendingHistory();
     if (historyIndexRef.current >= historyRef.current.length - 1) return;
     historyIndexRef.current += 1;
     setMarkdown(historyRef.current[historyIndexRef.current]);
+    setSaved(false);
   };
 
   const insert = (before: string, after: string, placeholder: string) => {
@@ -401,14 +432,20 @@ export default function Home() {
   };
 
   const loadFile = (file?: File) => {
-    if (!file || (!file.name.endsWith(".md") && !file.name.endsWith(".markdown") && file.type !== "text/plain")) {
+    if (!file || (!/\.(md|markdown)$/i.test(file.name) && file.type !== "text/plain")) {
       return;
     }
     const reader = new FileReader();
     reader.onload = () => {
-      const value = String(reader.result || "");
+      const value = String(reader.result ?? "");
+      if (historyTimerRef.current) {
+        clearTimeout(historyTimerRef.current);
+        historyTimerRef.current = null;
+      }
+      pendingHistoryValueRef.current = null;
       setMarkdown(value);
       setFileName(file.name);
+      setSaved(false);
       historyRef.current = [value];
       historyIndexRef.current = 0;
     };
@@ -418,17 +455,19 @@ export default function Home() {
   const downloadMarkdown = () => {
     const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = fileName.endsWith(".md") ? fileName : `${fileName}.md`;
-    link.click();
-    URL.revokeObjectURL(url);
+    const extension = /\.markdown$/i.test(fileName) ? ".markdown" : ".md";
+    triggerDownload(url, `${documentBaseName(fileName)}${extension}`);
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
-  const exportPdf = () => {
-    setView("preview");
+  const exportPdf = async () => {
+    const preview = previewRef.current;
+    if (!preview) return;
     setMobileMenu(false);
-    requestAnimationFrame(() => window.setTimeout(() => window.print(), 180));
+    setWatermarkOpen(false);
+    await waitForMermaid(preview);
+    await document.fonts?.ready;
+    requestAnimationFrame(() => window.print());
   };
 
   const exportPreviewPng = async () => {
@@ -467,6 +506,10 @@ export default function Home() {
     button.disabled = true;
     button.textContent = "\u751f\u6210\u4e2d\u2026";
     try {
+      await waitForMermaid(frame);
+      if (!diagram.querySelector("svg")) {
+        throw new Error("Mermaid diagram is not ready");
+      }
       await exportMermaidElement(
         diagram,
         `${documentBaseName(fileName)}-mermaid-${index}.png`,
@@ -509,8 +552,11 @@ export default function Home() {
         <div className="document-name">
           <input
             aria-label="文档名称"
-            value={fileName.replace(/\.md$/, "")}
-            onChange={(event) => setFileName(`${event.target.value}.md`)}
+            value={fileName.replace(/\.(md|markdown)$/i, "")}
+            onChange={(event) => {
+              setFileName(`${event.target.value}.md`);
+              setSaved(false);
+            }}
           />
           <span className={saved ? "is-saved" : ""}>
             {saved ? <Check size={12} /> : null}
@@ -693,7 +739,10 @@ export default function Home() {
         ref={fileInputRef}
         type="file"
         accept=".md,.markdown,text/markdown,text/plain"
-        onChange={(event) => loadFile(event.target.files?.[0])}
+        onChange={(event) => {
+          loadFile(event.target.files?.[0]);
+          event.currentTarget.value = "";
+        }}
         hidden
       />
 

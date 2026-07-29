@@ -44,3 +44,5 @@ next-env.d.ts
 # local development
 /.npm-cache/
 /.dev-server.*.log
+/.tools/
+*.tsbuildinfo

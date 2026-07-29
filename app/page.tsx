@@ -12,6 +12,7 @@ import {
   FileText,
   Heading2,
   Image as ImageIcon,
+  ImageDown,
   Italic,
   Link2,
   List,
@@ -31,7 +32,8 @@ import {
 import { marked } from "marked";
 import hljs from "highlight.js";
 import mermaid from "mermaid";
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { documentBaseName, exportMermaidSvg, triggerDownload, waitForMermaid } from "./png-export";
+import { type MouseEvent as ReactMouseEvent, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 
 const starterMarkdown = `# 把想法，变成漂亮的 PDF
 
@@ -103,7 +105,7 @@ marked.use({
       const language = lang?.trim().toLowerCase();
       if (language === "mermaid") {
         const source = normalizeMermaidSource(text);
-        return `<div class="diagram-frame"><div class="diagram-label">MERMAID</div><pre class="mermaid">${escapeHtml(source)}</pre></div>`;
+        return `<div class="diagram-frame"><div class="diagram-toolbar"><div class="diagram-label">MERMAID</div><button type="button" class="diagram-download" data-export-mermaid aria-label="&#23548;&#20986;&#27492; Mermaid &#22270;&#20026; PNG">&#19979;&#36733; PNG</button></div><pre class="mermaid">${escapeHtml(source)}</pre></div>`;
       }
 
       let highlighted = escapeHtml(text);
@@ -159,6 +161,7 @@ export default function Home() {
   const [dragging, setDragging] = useState(false);
   const [mobileMenu, setMobileMenu] = useState(false);
   const [ready, setReady] = useState(false);
+  const [exportingPng, setExportingPng] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -342,6 +345,52 @@ export default function Home() {
     requestAnimationFrame(() => window.setTimeout(() => window.print(), 180));
   };
 
+  const exportPreviewPng = async () => {
+    const preview = previewRef.current;
+    if (!preview || exportingPng) return;
+    setExportingPng(true);
+    setMobileMenu(false);
+    try {
+      await waitForMermaid(preview);
+      await document.fonts?.ready;
+      const { toPng } = await import("html-to-image");
+      const dataUrl = await toPng(preview, {
+        cacheBust: true,
+        pixelRatio: 2,
+        backgroundColor: theme === "dark" ? "#191a1d" : "#ffffff",
+        filter: (node) => !(node instanceof HTMLElement && node.classList.contains("diagram-download")),
+      });
+      triggerDownload(dataUrl, `${documentBaseName(fileName)}.png`);
+    } catch (error) {
+      console.error("PNG export failed", error);
+      window.alert("\u0050\u004e\u0047 \u5bfc\u51fa\u5931\u8d25\uff0c\u8bf7\u7f29\u77ed\u6587\u6863\u6216\u68c0\u67e5\u5916\u90e8\u56fe\u7247\u540e\u91cd\u8bd5\u3002");
+    } finally {
+      setExportingPng(false);
+    }
+  };
+
+  const handlePreviewClick = async (event: ReactMouseEvent<HTMLElement>) => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-export-mermaid]");
+    if (!button) return;
+    const frame = button.closest<HTMLElement>(".diagram-frame");
+    const svg = frame?.querySelector<SVGSVGElement>("svg");
+    if (!frame || !svg || button.disabled) return;
+    const diagrams = Array.from(previewRef.current?.querySelectorAll(".diagram-frame") || []);
+    const index = Math.max(1, diagrams.indexOf(frame) + 1);
+    const originalLabel = button.textContent;
+    button.disabled = true;
+    button.textContent = "\u751f\u6210\u4e2d\u2026";
+    try {
+      await exportMermaidSvg(svg, `${documentBaseName(fileName)}-mermaid-${index}.png`, theme === "dark" ? "#202125" : "#f7f7f4");
+    } catch (error) {
+      console.error("Mermaid PNG export failed", error);
+      window.alert("\u56fe\u8868\u5bfc\u51fa\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002");
+    } finally {
+      button.disabled = false;
+      button.textContent = originalLabel;
+    }
+  };
+
   return (
     <main
       className={`app-shell view-${view}`}
@@ -388,6 +437,9 @@ export default function Home() {
           <button className="ghost-button desktop-only" onClick={downloadMarkdown}>
             <Download size={15} /> 保存 MD
           </button>
+          <button className="ghost-button desktop-only" onClick={exportPreviewPng} disabled={exportingPng}>
+            <ImageDown size={15} /> {exportingPng ? "\u751f\u6210\u4e2d\u2026" : "\u5bfc\u51fa PNG"}
+          </button>
           <button className="primary-button" onClick={exportPdf}>
             <FileDown size={16} /> 导出 PDF
           </button>
@@ -400,6 +452,9 @@ export default function Home() {
           <div className="mobile-menu">
             <button onClick={() => fileInputRef.current?.click()}><Upload size={16} /> 导入 Markdown</button>
             <button onClick={downloadMarkdown}><Download size={16} /> 保存 Markdown</button>
+            <button onClick={exportPreviewPng} disabled={exportingPng}>
+              <ImageDown size={16} /> {exportingPng ? "\u751f\u6210\u4e2d\u2026" : "\u5bfc\u51fa\u9884\u89c8 PNG"}
+            </button>
             <button onClick={() => setTheme(theme === "light" ? "dark" : "light")}>
               {theme === "light" ? <Moon size={16} /> : <Sun size={16} />} 切换主题
             </button>
@@ -476,6 +531,7 @@ export default function Home() {
             <article
               ref={previewRef}
               className="markdown-body"
+              onClick={handlePreviewClick}
               dangerouslySetInnerHTML={{ __html: rendered }}
             />
           </div>

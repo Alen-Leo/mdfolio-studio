@@ -625,12 +625,44 @@ button {
   background: var(--surface-soft);
 }
 
+.diagram-toolbar {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .diagram-label {
-  padding: 10px 0 6px;
   color: var(--faint);
   font-size: 8px;
   font-weight: 700;
   letter-spacing: 0.12em;
+}
+
+.diagram-download {
+  height: 24px;
+  padding: 0 9px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 700;
+  transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+
+.diagram-download:hover {
+  border-color: #9db82d;
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface));
+  color: var(--ink);
+}
+
+.diagram-download:disabled,
+.ghost-button:disabled {
+  cursor: wait;
+  opacity: 0.58;
 }
 
 .diagram-frame .mermaid {
@@ -858,7 +890,8 @@ button {
   .editor-pane,
   .pane-heading,
   .pane-footer,
-  .drop-overlay {
+  .drop-overlay,
+  .diagram-download {
     display: none !important;
   }
 

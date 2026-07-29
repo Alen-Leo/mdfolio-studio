@@ -29,9 +29,8 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import { marked } from "marked";
-import hljs from "highlight.js";
 import mermaid from "mermaid";
+import { markdownParser } from "./markdown-parser";
 import { documentBaseName, exportMermaidElement, triggerDownload, waitForMermaid } from "./png-export";
 import type { WatermarkConfig } from "./png-export";
 import { type CSSProperties, type MouseEvent as ReactMouseEvent, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
@@ -83,52 +82,6 @@ flowchart LR
 ---
 
 开始编辑左侧内容，右侧会即时呈现最终效果。`;
-
-const escapeHtml = (value: string) =>
-  value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
-
-const normalizeMermaidSource = (value: string) =>
-  value
-    .replace(/\r\n?/g, "\n")
-    .replace(/[\u00a0\u1680\u2000-\u200a\u202f\u205f\u3000]/g, " ")
-    .replace(/[\u200b-\u200d\u2060\ufeff]/g, "")
-    .trim();
-
-marked.use({
-  gfm: true,
-  breaks: true,
-  tokenizer: {
-    del(source) {
-      if (source.startsWith("~") && !source.startsWith("~~")) return;
-      return false;
-    },
-  },
-  renderer: {
-    code({ text, lang }) {
-      const language = lang?.trim().toLowerCase();
-      if (language === "mermaid") {
-        const source = normalizeMermaidSource(text);
-        return `<div class="diagram-frame"><div class="diagram-toolbar"><div class="diagram-label">MERMAID</div><button type="button" class="diagram-download" data-export-mermaid aria-label="&#23548;&#20986;&#27492; Mermaid &#22270;&#20026; PNG">&#19979;&#36733; PNG</button></div><pre class="mermaid">${escapeHtml(source)}</pre></div>`;
-      }
-
-      let highlighted = escapeHtml(text);
-      let languageLabel = language || "plain text";
-      if (language && hljs.getLanguage(language)) {
-        highlighted = hljs.highlight(text, { language }).value;
-      } else if (!language) {
-        const result = hljs.highlightAuto(text);
-        highlighted = result.value;
-        languageLabel = result.language || "plain text";
-      }
-
-      return `<div class="code-frame"><div class="code-header"><span>${escapeHtml(languageLabel)}</span><i></i><i></i><i></i></div><pre><code class="hljs">${highlighted}</code></pre></div>`;
-    },
-  },
-});
 
 type ViewMode = "split" | "editor" | "preview";
 
@@ -245,7 +198,7 @@ export default function Home() {
     let cancelled = false;
     const render = async () => {
       const [{ default: DOMPurify }] = await Promise.all([import("dompurify")]);
-      const raw = await marked.parse(deferredMarkdown);
+      const raw = await markdownParser.parse(deferredMarkdown);
       if (!cancelled) {
         setRendered(
           DOMPurify.sanitize(raw, {

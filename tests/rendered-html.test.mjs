@@ -79,14 +79,15 @@ test("wires whole-preview and per-Mermaid PNG exports", async () => {
 });
 
 test("keeps export and editor edge cases covered", async () => {
-  const [page, layout, packageJson] = await Promise.all([
+  const [page, layout, packageJson, parser] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
     readFile(new URL("../package.json", import.meta.url), "utf8"),
+    readFile(new URL("../app/markdown-parser.ts", import.meta.url), "utf8"),
   ]);
 
   assert.match(page, /cached !== null/);
-  assert.match(page, /source\.startsWith\("~"\)[\s\S]*!source\.startsWith\("~~"\)/);
+  assert.match(parser, /source\.startsWith\("~"\)[\s\S]*!source\.startsWith\("~~"\)/);
   assert.match(page, /pendingHistoryValueRef/);
   assert.match(page, /currentTarget\.value = ""/);
   assert.match(page, /await waitForMermaid\(preview\)[\s\S]*document\.fonts/);
@@ -97,4 +98,5 @@ test("keeps export and editor edge cases covered", async () => {
   assert.match(layout, /url: "og\.png"/);
   assert.match(packageJson, /"build": "vinext build"/);
   assert.doesNotMatch(packageJson, /WRANGLER_LOG_PATH=/);
+  assert.match(packageJson, /"marked-footnote": "1\.4\.0"/);
 });

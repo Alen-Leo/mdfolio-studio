@@ -175,6 +175,7 @@ export default function Home() {
   const [exportingPng, setExportingPng] = useState(false);
   const [watermarkOpen, setWatermarkOpen] = useState(false);
   const [watermark, setWatermark] = useState<WatermarkConfig>(defaultWatermark);
+  const [watermarkTileCount, setWatermarkTileCount] = useState(30);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -324,6 +325,38 @@ export default function Home() {
     "--watermark-cell-width": `${Math.ceil(watermarkCellWidth)}px`,
     "--watermark-row-height": `${Math.ceil(watermarkRowHeight)}px`,
   } as CSSProperties;
+
+  useEffect(() => {
+    const preview = previewRef.current;
+    const content = preview?.querySelector<HTMLElement>(".markdown-body");
+    if (!content || !watermark.enabled || watermark.mode !== "tile") {
+      setWatermarkTileCount(1);
+      return;
+    }
+
+    const updateTileCount = () => {
+      const contentWidth = Math.max(1, content.clientWidth);
+      const contentHeight = Math.max(1, content.scrollHeight);
+      const columns = Math.max(
+        1,
+        Math.floor(contentWidth / Math.min(contentWidth, watermarkCellWidth)),
+      );
+      const rows =
+        Math.ceil(contentHeight / Math.max(120, watermarkRowHeight)) + 1;
+      setWatermarkTileCount(Math.min(600, Math.max(1, columns * rows)));
+    };
+
+    updateTileCount();
+    const observer = new ResizeObserver(updateTileCount);
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, [
+    rendered,
+    watermark.enabled,
+    watermark.mode,
+    watermarkCellWidth,
+    watermarkRowHeight,
+  ]);
 
   const pushHistory = useCallback((value: string) => {
     if (historyTimerRef.current) clearTimeout(historyTimerRef.current);
@@ -642,7 +675,7 @@ export default function Home() {
               <article className="markdown-body" dangerouslySetInnerHTML={{ __html: rendered }} />
               {watermark.enabled && watermark.text.trim() && (
                 <div className={`watermark-layer watermark-${watermark.mode}`} style={watermarkStyle} aria-hidden="true">
-                  {Array.from({ length: watermark.mode === "tile" ? 30 : 1 }, (_, index) => (
+                  {Array.from({ length: watermark.mode === "tile" ? watermarkTileCount : 1 }, (_, index) => (
                     <span key={index}>{watermark.text.trim()}</span>
                   ))}
                 </div>

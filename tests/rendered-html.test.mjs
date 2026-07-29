@@ -62,6 +62,9 @@ test("wires whole-preview and per-Mermaid PNG exports", async () => {
   assert.match(page, /watermark-layer/);
   assert.match(page, /watermarkTextUnits/);
   assert.match(page, /--watermark-cell-width/);
+  assert.match(page, /ResizeObserver/);
+  assert.match(page, /watermarkTileCount/);
+  assert.doesNotMatch(page, /watermark\.mode === "tile" \? 30 : 1/);
   assert.match(page, /exportMermaidElement[\s\S]*watermark/);
   assert.doesNotMatch(page, /new Date|location\.href/);
   assert.match(css, /\.diagram-download/);

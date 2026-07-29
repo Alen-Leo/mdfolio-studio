@@ -60,8 +60,14 @@ const drawWatermark = (
     drawAt(canvas.width / 2, canvas.height / 2);
   } else {
     const textWidth = context.measureText(watermark.text.trim()).width;
-    const stepX = Math.max(textWidth * 1.7, fontSize * 8);
-    const stepY = Math.max(fontSize * 5, 180 * scale);
+    const rotatedWidth =
+      Math.abs(textWidth * Math.cos(angle)) +
+      Math.abs(fontSize * Math.sin(angle));
+    const rotatedHeight =
+      Math.abs(textWidth * Math.sin(angle)) +
+      Math.abs(fontSize * Math.cos(angle));
+    const stepX = Math.max(rotatedWidth + fontSize * 2.5, fontSize * 8);
+    const stepY = Math.max(rotatedHeight + fontSize * 2, fontSize * 5);
     for (let y = -stepY; y < canvas.height + stepY; y += stepY) {
       for (let x = -stepX; x < canvas.width + stepX; x += stepX) {
         drawAt(x + (Math.round(y / stepY) % 2 ? stepX / 2 : 0), y);

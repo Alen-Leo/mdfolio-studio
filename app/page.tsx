@@ -298,10 +298,31 @@ export default function Home() {
     return { words: chinese + words, lines: markdown.split("\n").length };
   }, [markdown]);
 
+  const watermarkTextUnits = Array.from(watermark.text.trim()).reduce(
+    (total, character) =>
+      total + (/[\u2e80-\u9fff\uff00-\uffef]/.test(character) ? 1 : 0.62),
+    0,
+  );
+  const watermarkAngle = Math.abs((watermark.angle * Math.PI) / 180);
+  const watermarkTextWidth = Math.max(
+    watermark.size * 2,
+    watermarkTextUnits * watermark.size * 0.82,
+  );
+  const watermarkCellWidth =
+    watermarkTextWidth * Math.cos(watermarkAngle) +
+    watermark.size * Math.sin(watermarkAngle) +
+    watermark.size * 2.5;
+  const watermarkRowHeight =
+    watermarkTextWidth * Math.sin(watermarkAngle) +
+    watermark.size * Math.cos(watermarkAngle) +
+    watermark.size * 2;
+
   const watermarkStyle = {
     "--watermark-opacity": String(watermark.opacity),
     "--watermark-size": `${watermark.size}px`,
     "--watermark-angle": `${watermark.angle}deg`,
+    "--watermark-cell-width": `${Math.ceil(watermarkCellWidth)}px`,
+    "--watermark-row-height": `${Math.ceil(watermarkRowHeight)}px`,
   } as CSSProperties;
 
   const pushHistory = useCallback((value: string) => {

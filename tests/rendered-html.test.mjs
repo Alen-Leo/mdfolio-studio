@@ -55,12 +55,18 @@ test("wires whole-preview and per-Mermaid PNG exports", async () => {
   assert.match(helper, /pixelRatio:\s*3/);
   assert.match(helper, /type WatermarkConfig/);
   assert.match(helper, /drawWatermark/);
+  assert.match(helper, /rotatedWidth/);
+  assert.match(helper, /rotatedHeight/);
   assert.match(helper, /canvas\.toBlob/);
   assert.match(page, /mdfolio-watermark/);
   assert.match(page, /watermark-layer/);
+  assert.match(page, /watermarkTextUnits/);
+  assert.match(page, /--watermark-cell-width/);
   assert.match(page, /exportMermaidElement[\s\S]*watermark/);
   assert.match(css, /\.diagram-download/);
   assert.match(css, /\.watermark-popover/);
+  assert.match(css, /auto-fit/);
+  assert.match(css, /--watermark-row-height/);
   assert.match(css, /@media print[\s\S]*\.watermark-layer[\s\S]*position:\s*fixed/);
   assert.match(css, /@media print[\s\S]*\.diagram-download/);
   assert.match(packageJson, /"html-to-image": "\^1\.11\.13"/);

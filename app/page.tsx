@@ -32,7 +32,7 @@ import {
 import { marked } from "marked";
 import hljs from "highlight.js";
 import mermaid from "mermaid";
-import { documentBaseName, exportMermaidSvg, triggerDownload, waitForMermaid } from "./png-export";
+import { documentBaseName, exportMermaidElement, triggerDownload, waitForMermaid } from "./png-export";
 import { type MouseEvent as ReactMouseEvent, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 
 const starterMarkdown = `# 把想法，变成漂亮的 PDF
@@ -373,15 +373,15 @@ export default function Home() {
     const button = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-export-mermaid]");
     if (!button) return;
     const frame = button.closest<HTMLElement>(".diagram-frame");
-    const svg = frame?.querySelector<SVGSVGElement>("svg");
-    if (!frame || !svg || button.disabled) return;
+    const diagram = frame?.querySelector<HTMLElement>(".mermaid");
+    if (!frame || !diagram || button.disabled) return;
     const diagrams = Array.from(previewRef.current?.querySelectorAll(".diagram-frame") || []);
     const index = Math.max(1, diagrams.indexOf(frame) + 1);
     const originalLabel = button.textContent;
     button.disabled = true;
     button.textContent = "\u751f\u6210\u4e2d\u2026";
     try {
-      await exportMermaidSvg(svg, `${documentBaseName(fileName)}-mermaid-${index}.png`, theme === "dark" ? "#202125" : "#f7f7f4");
+      await exportMermaidElement(diagram, `${documentBaseName(fileName)}-mermaid-${index}.png`, theme === "dark" ? "#202125" : "#f7f7f4");
     } catch (error) {
       console.error("Mermaid PNG export failed", error);
       window.alert("\u56fe\u8868\u5bfc\u51fa\u5931\u8d25\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5\u3002");

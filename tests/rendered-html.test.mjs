@@ -38,10 +38,10 @@ test("wires whole-preview and per-Mermaid PNG exports", async () => {
   assert.match(page, /import\("html-to-image"\)/);
   assert.match(page, /pixelRatio:\s*2/);
   assert.match(page, /data-export-mermaid/);
-  assert.match(page, /exportMermaidSvg/);
-  assert.match(helper, /Math\.min\(3,\s*8192 \/ width,\s*8192 \/ height\)/);
-  assert.match(helper, /canvas\.toBlob/);
-  assert.match(helper, /image\/png/);
+  assert.match(page, /exportMermaidElement/);
+  assert.match(helper, /import\("html-to-image"\)/);
+  assert.match(helper, /pixelRatio:\s*3/);
+  assert.match(helper, /toBlob\(element/);
   assert.match(css, /\.diagram-download/);
   assert.match(css, /@media print[\s\S]*\.diagram-download/);
   assert.match(packageJson, /"html-to-image": "\^1\.11\.13"/);

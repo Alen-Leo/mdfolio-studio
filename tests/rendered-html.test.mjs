@@ -29,6 +29,16 @@ test("server-renders the MDFolio workspace and PNG action", async () => {
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape/i);
 });
 
+test("production metadata never points at localhost", async () => {
+  const [layout, html] = await Promise.all([
+    readFile(new URL("../app/layout.tsx", import.meta.url), "utf8"),
+    readFile(new URL("../dist/client/index.html", import.meta.url), "utf8"),
+  ]);
+
+  assert.doesNotMatch(layout, /http:\/\/localhost|127\.0\.0\.1/);
+  assert.doesNotMatch(html, /http:\/\/localhost|127\.0\.0\.1/);
+  assert.match(html, /https:\/\/mdfolio-studio\.alen0330\.chatgpt\.site\/favicon\.svg/);
+});
 test("wires whole-preview and per-Mermaid PNG exports", async () => {
   const [page, helper, css, packageJson] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),

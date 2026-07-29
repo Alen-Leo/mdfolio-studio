@@ -1094,7 +1094,7 @@ button {
 
 @page {
   size: A4;
-  margin: 15mm 17mm 17mm;
+  margin: 0;
 }
 
 @media print {
@@ -1149,9 +1149,11 @@ button {
     width: auto !important;
     min-height: 0;
     margin: 0;
-    padding: 0;
+    padding: 15mm 17mm 17mm;
     border: 0;
     box-shadow: none;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
     color: #171719;
     font-size: 10.5pt;
   }

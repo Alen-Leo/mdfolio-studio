@@ -35,7 +35,7 @@ import { documentBaseName, exportMermaidElement, triggerDownload, waitForMermaid
 import type { WatermarkConfig } from "./png-export";
 import { type CSSProperties, type MouseEvent as ReactMouseEvent, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 
-const starterMarkdown = `# 把想法，变成漂亮的 PDF
+const starterMarkdown = `# 把想法，变成漂亮的文档
 
 > **MDFolio** 是一个专注、私密的 Markdown 排版工作台。内容只在你的浏览器里处理。
 
@@ -45,7 +45,7 @@ const starterMarkdown = `# 把想法，变成漂亮的 PDF
 - [x] 自动代码高亮
 - [x] Mermaid 图表渲染
 - [x] 表格、任务清单与引用
-- [x] A4 优化的 PDF 导出
+- [x] A4 优化的 PDF 与高清 PNG 导出
 
 ## 代码高亮
 
@@ -67,7 +67,7 @@ flowchart LR
     A[Markdown] --> B{实时解析}
     B --> C[代码高亮]
     B --> D[Mermaid]
-    C --> E[精美 PDF]
+    C --> E[PDF / PNG]
     D --> E
 \`\`\`
 
